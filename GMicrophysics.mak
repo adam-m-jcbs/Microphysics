@@ -135,9 +135,12 @@ build_info.f90:
 	@echo " "
 
 $(odir)/build_info.o: build_info.f90
+ifdef BUILD_ORDERED_OBJECTS_LIST
+	$(eval ordered_objects += $@)
+else
 	$(COMPILE.f90) $(OUTPUT_OPTION) build_info.f90
 	rm -f build_info.f90
-
+endif
 
 
 #-----------------------------------------------------------------------------
