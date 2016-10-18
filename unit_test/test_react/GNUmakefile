@@ -26,16 +26,9 @@ PROBIN_PARAMETER_DIRS := $(TEST_DIR)
 
 ALL:
 
-
 include $(MICROPHYSICS_HOME)/GMicrophysics.mak
-
 
 ALL: $(pnames)
 
 # include the fParallel Makefile rules
 include $(BOXLIB_HOME)/Tools/F_mk/GMakerules.mak
-
-
-
-
-

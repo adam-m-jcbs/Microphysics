@@ -154,13 +154,14 @@ program test_react
            enddo
         enddo
      enddo
+     print *, 'wtf', lo(3), hi(3), nX, do_acc
 
      !$OMP PARALLEL DO PRIVATE(ii,jj,kk,j) &
      !$OMP PRIVATE(burn_state_in, burn_state_out) &
      !$OMP REDUCTION(+:n_rhs_avg) REDUCTION(MAX:n_rhs_max) REDUCTION(MIN:n_rhs_min) &
      !$OMP SCHEDULE(DYNAMIC,1)
 
-     !$acc data copyin(temp_min, dlogT, dens_min, dlogrho, xn_zone, lo, hi, tmax) &
+     !$acc data copyin(temp_min, dlogT, dens_min, dlogrho, xn_zone(1:nspec,lo(3):hi(3)), lo, hi, tmax) &
      !$acc      copy(state(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),:)) if (do_acc == 1)
 
      !$acc parallel reduction(+:n_rhs_avg) reduction(max:n_rhs_max) reduction(min:n_rhs_min) if (do_acc == 1)
@@ -175,37 +176,54 @@ program test_react
               burn_state_in % rho = state(ii, jj, kk, pf % irho)
               burn_state_in % T = state(ii, jj, kk, pf % itemp)
 
-              burn_state_in % xn(:) = max(xn_zone(:, kk), 1.e-10_dp_t)
-              call normalize_abundances_burn(burn_state_in)
-
-              ! the integrator doesn't actually care about the initial internal
-              ! energy.
-              burn_state_in % e = ZERO
-
-              call actual_burner(burn_state_in, burn_state_out, tmax, ZERO)
-
-              ! store
+              !burn_state_in % xn(:) = max(xn_zone(:, kk), 1.e-10_dp_t)
+              !burn_state_in % xn(:) = xn_zone(:, kk)
 
               do j = 1, nspec
-                 state(ii, jj, kk, pf % ispec_old + j - 1) = burn_state_in % xn(j)
+                 !burn_state_in % xn(j) = max(xn_zone(j, kk), 1.e-10_dp_t)
+                 burn_state_in % xn(j) = xn_zone(j, kk)
+                 if (xn_zone(j,kk) > 1.0) then
+                    print *, 'j, kk, xn_zone: ', j, kk, xn_zone(j,kk)
+                 else
+                    print *, 'j, kk, xn_zone: ', j, kk, xn_zone(j,kk)
+                 endif
               enddo
 
-              do j = 1, nspec
-                 state(ii, jj, kk, pf % ispec + j - 1) = burn_state_out % xn(j)
-              enddo
-                            
-              do j=1, nspec
-                 ! an explicit loop is needed here to keep the GPU happy
-                 state(ii, jj, kk, pf % irodot + j - 1) = &
-                      (burn_state_out % xn(j) - burn_state_in % xn(j)) / tmax
-              enddo
+              !call normalize_abundances_burn(burn_state_in)
 
-              state(ii, jj, kk, pf % irho_hnuc) = &
-                   state(ii, jj, kk, pf % irho) * (burn_state_out % e - burn_state_in % e) / tmax
-              
-              n_rhs_avg = n_rhs_avg + burn_state_out % n_rhs
-              n_rhs_min = min(n_rhs_min, burn_state_out % n_rhs)
-              n_rhs_max = max(n_rhs_max, burn_state_out % n_rhs)
+              !! the integrator doesn't actually care about the initial internal
+              !! energy.
+              !burn_state_in % e = ZERO
+
+              !if (ii == 1 .and. jj == 1 .and. kk == 1) then
+              !   print *, 'rho, T, e in: ', burn_state_in%rho, burn_state_in%T, burn_state_in%e
+              !   print *, 'X(1) in:      ', burn_state_in%xn(1)
+              !endif
+
+              !!call actual_burner(burn_state_in, burn_state_out, tmax, ZERO)
+
+              !! store
+
+              !do j = 1, nspec
+              !   state(ii, jj, kk, pf % ispec_old + j - 1) = burn_state_in % xn(j)
+              !enddo
+
+              !do j = 1, nspec
+              !   state(ii, jj, kk, pf % ispec + j - 1) = burn_state_out % xn(j)
+              !enddo
+              !              
+              !do j=1, nspec
+              !   ! an explicit loop is needed here to keep the GPU happy
+              !   state(ii, jj, kk, pf % irodot + j - 1) = &
+              !        (burn_state_out % xn(j) - burn_state_in % xn(j)) / tmax
+              !enddo
+
+              !state(ii, jj, kk, pf % irho_hnuc) = &
+              !     state(ii, jj, kk, pf % irho) * (burn_state_out % e - burn_state_in % e) / tmax
+              !
+              !n_rhs_avg = n_rhs_avg + burn_state_out % n_rhs
+              !n_rhs_min = min(n_rhs_min, burn_state_out % n_rhs)
+              !n_rhs_max = max(n_rhs_max, burn_state_out % n_rhs)
 
            enddo
         enddo
