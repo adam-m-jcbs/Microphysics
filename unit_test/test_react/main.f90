@@ -128,7 +128,7 @@ program test_react
   ! normalize -- just in case
   do kk = domlo(3), domhi(3)
      sum_X = sum(xn_zone(:, kk))
-     xn_zone(:, kk) = xn_zone(:, kk)/sum_X
+     xn_zone(:, kk) = xn_zone(:, kk)/sum_X * 17. + 100.
   enddo
 
   ! GPU doesn't like derived-types with bound procedures
@@ -164,6 +164,7 @@ program test_react
         enddo
      enddo
      print *, 'wtf', lo(3), hi(3), nX, do_acc
+     print *, 'xn_zone: ', xn_zone(1,15)
 
      !$OMP PARALLEL DO PRIVATE(ii,jj,kk,j) &
      !$OMP PRIVATE(burn_state_in, burn_state_out) &
@@ -173,8 +174,12 @@ program test_react
      !$acc data copyin(temp_min, dlogT, dens_min, dlogrho, xn_zone, lo, hi, tmax) &
      !$acc      copyin(itemp, irho, ispec, ispec_old, irodot, irho_hnuc) &
      !$acc      copy(state(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),:)) if (do_acc == 1)
+     
 
      !$acc parallel reduction(+:n_rhs_avg) reduction(max:n_rhs_max) reduction(min:n_rhs_min) if (do_acc == 1)
+
+     !print *, 'xn_zone on acc: ', xn_zone(1,15)
+     !burn_state_in % xn(1) = xn_zone(1, 15)
 
      !$acc loop gang vector collapse(3) &
      !$acc private(burn_state_in, burn_state_out, ii, jj, kk, j)
@@ -183,6 +188,8 @@ program test_react
         do jj = lo(2), hi(2)
            do ii = lo(1), hi(1)
 
+
+              !print *, 'state_rho on acc: ', ii, jj, kk, state(ii, jj, kk, pf % irho)
               burn_state_in % rho = state(ii, jj, kk, irho)
               burn_state_in % T = state(ii, jj, kk, itemp)
 
