@@ -128,7 +128,7 @@ program test_react
   ! normalize -- just in case
   do kk = domlo(3), domhi(3)
      sum_X = sum(xn_zone(:, kk))
-     xn_zone(:, kk) = xn_zone(:, kk)/sum_X * 17. + 100.
+     xn_zone(:, kk) = xn_zone(:, kk)/sum_X
   enddo
 
   ! GPU doesn't like derived-types with bound procedures
