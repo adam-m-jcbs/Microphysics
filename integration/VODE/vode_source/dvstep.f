@@ -219,6 +219,8 @@ C-----------------------------------------------------------------------
 C
 C Call the nonlinear system solver. ------------------------------------
 C
+      print '(1x,"t, dt, k, temp: ",1x,es8.2,1x,es8.2,1x,i2,1x,es10.2)',
+     &      TN, H, L-1, Y(N-1)
       CALL VNLS (Y, YH, LDYH, VSAV, SAVF, EWT, ACOR, IWM, WM,
      1           F, JAC, PSOL, NFLAG, RPAR, IPAR)
 C
@@ -252,6 +254,7 @@ C made and control passes to statement 500 if it fails.
 C-----------------------------------------------------------------------
  450  CONTINUE
       DSM = ACNRM/TQ(2)
+      print '(1x,"DSM (error): ",es10.4)', DSM
       IF (DSM .GT. ONE) GO TO 500
 C-----------------------------------------------------------------------
 C After a successful step, update the YH and TAU arrays and decrement

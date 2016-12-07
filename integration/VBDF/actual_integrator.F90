@@ -174,8 +174,19 @@ contains
     call initial_timestep(ts, t0, t1, dt_init)
 
     ! Call the integration routine.
-
-
+    !print *, 'y0(20,1):   ', y0(20,1)
+    !print *, 'y0(20,1) >: ', y0(20,1) > 428847948.
+    !!                                   428847949.2954472     
+    !print *, 'y0(20,1) <: ', y0(20,1) < 428847950._dp_t
+    !if (y0(20,1) > 428847948._dp_t .and. y0(20,1) < 428847950._dp_t) then
+    !   dt_init = 1.3799071898999886e-17
+    !endif
+    print *, 'Calling bdf_advance with: '
+    print *, '   t0 =      ', t0
+    print *, '   t1 =      ', t1
+    print *, '   dt_init = ', dt_init
+    print *, '   y0 = ', y0
+    ts%debug = .true.
     call bdf_advance(ts, y0, t0, y1, t1, dt_init, &
                      RESET, reuse_jac, ierr, .true.)
 

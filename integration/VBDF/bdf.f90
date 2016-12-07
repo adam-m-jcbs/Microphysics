@@ -68,6 +68,13 @@ contains
     !but for GPU dev I'm trying to simplify.
     !linitial = initial_call
 
+    if (ts%debug) then
+       print *, 'Entering bdf_advance with'
+       print *, '   t0, t1, dt0 = ', t0, t1, dt0
+       print *, '   y0          = ', y0(:,1)
+       print *, '   rtol        = ', ts%rtol(:)
+       print *, '   atol        = ', ts%atol(:)
+    endif
     if (reset) then
        ts%t = t0
        call bdf_reset(ts, y0, dt0, reuse)
@@ -99,10 +106,13 @@ contains
        !      end do
        !   end do
        !endif
-       !print *, 'b4: ', ts%z0(1,1,0)
+       print '(1x,"t, dt, k, temp: ",1x,es8.2,1x,es8.2,1x,i2,1x,es10.2)', ts%t, ts%dt, ts%k, ts%z0(ts%neq-1,1,0)
        call bdf_solve(ts)         ! solve for y_n based on predicted y and yd
-       !print *, 'af: ', ts%z0(1,1,0)
        call bdf_check(ts, retry, ierr)    ! check for solver errors and test error estimate
+       !print *, 'Left bdf_solve/bdf_check with: '
+       !print *, '   ierr = ', ierr
+       !print *, '   y    = ', ts%y(ts%neq-1,1)
+       !print *, '   z0   = ', ts%z0(ts%neq-1,1,0)
 
        !if (ierr /= BDF_ERR_SUCCESS) return
        if (ierr /= BDF_ERR_SUCCESS) exit
@@ -134,6 +144,9 @@ contains
     
     !print *, 'y1: ', y1
   end subroutine bdf_advance
+
+
+
 
   !
   ! Compute Nordsieck update coefficients l and error coefficients tq.
@@ -222,6 +235,8 @@ contains
     call ewts(ts)
   end subroutine bdf_update
 
+
+
   !
   ! Predict (apply Pascal matrix).
   !
@@ -280,7 +295,6 @@ contains
     dt_rat = dt_adj / ts%dt_nwt
     if (ts%p_age > ts%max_p_age) ts%refactor = .true.
     if (dt_rat < 0.7d0 .or. dt_rat > 1.429d0) ts%refactor = .true.
-
     iterating = .true.
 
     do k = 1, ts%max_iters
@@ -292,6 +306,7 @@ contains
           if (ts%ncse > 0  .and. (dt_rat < 0.2d0 .or. dt_rat > 5.d0)) rebuild = .false.
 
           if (rebuild) then
+             print *, 'rebuilding Jac...'
              call jac(ts)
              ts%nje   = ts%nje + 1*ts%npt
              ts%j_age = 0
@@ -340,6 +355,7 @@ contains
              ts%e(m,p) = ts%e(m,p) + ts%b(m,p)
              ts%y(m,p) = ts%z0(m,p,0) + ts%e(m,p)
           end do
+          print '(1x,"solver error: ",es10.4)', norm(ts%b(:,p), ts%ewt(:,p))
           if (norm(ts%b(:,p), ts%ewt(:,p)) < ONE) iterating(p) = .false.
        end do
 
@@ -367,6 +383,12 @@ contains
     ! if solver failed many times, bail
     if (ts%ncit >= ts%max_iters .and. ts%ncse > 7) then
        err = BDF_ERR_SOLVER
+       print *, 'BDF_ERR_SOLVER!'
+       print *, '   ts%ncit: ', ts%ncit
+       print *, '      > ts%max_iters: ', ts%max_iters
+       print *, '   .and.'
+       print *, '   ts%ncse: ', ts%ncse
+       print *, '      > 7'
        return
     end if
 
@@ -382,6 +404,7 @@ contains
     ! if local error is too large, shrink dt and try again
     do p = 1, ts%npt
        error = ts%tq(0) * norm(ts%e(:,p), ts%ewt(:,p))
+       print '(1x,"check error: ",es10.4)', error
        if (error > ONE) then
           eta = ONE / ( (6.d0 * error) ** (ONE / ts%k) + 1.d-6 )
           call rescale_timestep(ts, eta, .false.)

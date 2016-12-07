@@ -36,18 +36,33 @@ program burn_cell
   print *, "small_dens = ", small_dens
 
   ! Fill burn state input
-  write(*,*) 'Maximum Time (s): '
-  read(*,*) tmax
-  write(*,*) 'Number of time subdivisions: '
-  read(*,*) ntimes
-  write(*,*) 'State Density (g/cm^3): '
-  read(*,*) burn_state_in%rho
-  write(*,*) 'State Temperature (K): '
-  read(*,*) burn_state_in%T
-  do i = 1, nspec
-     write(*,*) 'Mass Fraction (', spec_names(i), '): '
-     read(*,*) burn_state_in%xn(i)
-  end do
+  !write(*,*) 'Maximum Time (s): '
+  !read(*,*) tmax
+  !write(*,*) 'Number of time subdivisions: '
+  !read(*,*) ntimes
+  !write(*,*) 'State Density (g/cm^3): '
+  !read(*,*) burn_state_in%rho
+  !write(*,*) 'State Temperature (K): '
+  !read(*,*) burn_state_in%T
+  !do i = 1, nspec
+  !   write(*,*) 'Mass Fraction (', spec_names(i), '): '
+  !   read(*,*) burn_state_in%xn(i)
+  !end do
+
+  tmax = 1.0d-9
+  ntimes = 1
+  burn_state_in%rho = 91028210.15130396
+  burn_state_in%T   = 428847949.2954472
+  burn_state_in%xn(:) = (/0.6499999989599999,      9.9999999839999996E-011, & 
+                          0.2999999995199999,      4.9999999919999996E-002, &   
+                          9.9999999839999996E-011, 9.9999999839999996E-011, &   
+                          9.9999999839999996E-011, 9.9999999839999996E-011, & 
+                          9.9999999839999996E-011, 9.9999999839999996E-011, &   
+                          9.9999999839999996E-011, 9.9999999839999996E-011, &   
+                          9.9999999839999996E-011, 9.9999999839999996E-011, & 
+                          9.9999999839999996E-011, 9.9999999839999996E-011, &
+                          9.9999999839999996E-011, 9.9999999839999996E-011, &
+                          9.9999999839999996E-011 /) 
 
   ! normalize -- just in case
   !call normalize_abundances_burn(burn_state_in)
@@ -63,7 +78,7 @@ program burn_cell
   burn_state_in % time = ZERO
   call write_burn_t(out_name, burn_state_in)
   
-  dt = tmax/ntimes
+  dt = tmax/float(ntimes)
   
   do i = 1, ntimes
      ! Do burn

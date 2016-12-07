@@ -1316,6 +1316,11 @@ C Call DVHIN to set initial step size H0 to be attempted. --------------
      1   UROUND, RWORK(LEWT), ITOL, ATOL, Y, RWORK(LACOR), H0,
      2   NITER, IER)
       NFE = NFE + NITER
+      print *, 'Entering dvode with'
+      print *, '   t0, t1, dt0 = ', T, TOUT, H0
+      print *, '   y0          = ', Y(1:NEQ)
+      print *, '   rtol        = ', RTOL(1:NEQ)
+      print *, '   atol        = ', ATOL(1:NEQ)
       IF (IER .NE. 0) GO TO 622
 C Adjust H0 if necessary to meet HMAX bound. ---------------------------
  180  RH = ABS(H0)*HMXI
@@ -1399,10 +1404,19 @@ C-----------------------------------------------------------------------
 C CALL DVSTEP (Y, YH, NYH, YH, EWT, SAVF, VSAV, ACOR,
 C              WM, IWM, F, JAC, F, DVNLSD, RPAR, IPAR)
 C-----------------------------------------------------------------------
+C     print *, 'call dvstep with: '
+C     print *, '   H = ', H
+C     print *, '   HMIN = ', HMIN
+C     print *, '   k = ', L-1
+C     print *, '   Y = ', Y(1:NEQ)
       CALL DVSTEP (Y, RWORK(LYH), NYH, RWORK(LYH), RWORK(LEWT),
      1   RWORK(LSAVF), Y, RWORK(LACOR), RWORK(LWM), IWORK(LIWM),
      2   F, JAC, F, DVNLSD, RPAR, IPAR)
       KGO = 1 - KFLAG
+C     print *, 'left dvstep with: '
+C     print *, '   KGO =   ', KGO
+C     print *, '   KFLAG = ', KFLAG
+C     print *, '   Y =     ', RWORK(LYH:LYH+NEQ)
 C Branch on KFLAG.  Note: In this version, KFLAG can not be set to -3.
 C  KFLAG .eq. 0,   -1,  -2
       GO TO (300, 530, 540), KGO

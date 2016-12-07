@@ -79,6 +79,7 @@ C
       PARAMETER(CCMAX = 0.3D0, CRDOWN = 0.3D0, MAXCOR = 3, MSBP = 20)
       PARAMETER(RDIV  = 2.0D0, ONE = 1.0D0, TWO = 2.0D0, ZERO = 0.0D0)
 
+      print '(1x,"NFLAG, MITER IN:  ",1x,i2,1x,i2)', NFLAG, MITER
 C-----------------------------------------------------------------------
 C On the first step, on a change of method order, or after a
 C nonlinear convergence failure with NFLAG = -2, set IPUP = MITER
@@ -169,6 +170,7 @@ C rate constant is stored in CRATE, and this is used in the test.
 C-----------------------------------------------------------------------
  400  IF (M .NE. 0) CRATE = MAX(CRDOWN*CRATE,DEL/DELP)
       DCON = DEL*MIN(ONE,CRATE)/TQ(4)
+      print '(1x,"solver error: ",es10.4)', DCON
       IF (DCON .LE. ONE) GO TO 450
       M = M + 1
       IF (M .EQ. MAXCOR) GO TO 410
@@ -187,6 +189,7 @@ C
       NFLAG = -1
       ICF = 2
       IPUP = MITER
+      print '(1x,"NFLAG, IERPJ OUT: ",1x,i2)', NFLAG, IERPJ
       RETURN
 C
 C Return for successful step. ------------------------------------------
@@ -195,6 +198,7 @@ C Return for successful step. ------------------------------------------
       ICF = 0
       IF (M .EQ. 0) ACNRM = DEL
       IF (M .GT. 0) ACNRM = DVNORM (N, ACOR, EWT)
+      print '(1x,"NFLAG OUT: ",1x,i2)', NFLAG
       RETURN
 C----------------------- End of Subroutine DVNLSD ----------------------
       END

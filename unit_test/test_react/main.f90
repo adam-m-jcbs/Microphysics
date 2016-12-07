@@ -201,6 +201,11 @@ program test_react
               ! the integrator doesn't actually care about the initial internal
               ! energy.
               burn_state_in % e = ZERO
+              print *, 'Cell ', ii, jj, kk
+              print *, '   calling actual_burner() with'
+              print *, '   rho = ', burn_state_in%rho
+              print *, '   T   = ', burn_state_in%T
+              print *, '   xn  = ', burn_state_in%xn(:)
 
               call actual_burner(burn_state_in, burn_state_out, tmax, ZERO)
 
