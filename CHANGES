@@ -1,16 +1,26 @@
 
-changes since last merge:
+# changes since last merge:
 
-previous changes:
+
+# previous changes:
+
+* 17.01
+
+ -- we've removed the option to integrate molar fractions and instead
+    the ODE system always operates on mass fractions (the networks 
+    return derivatives of molar fractions and they are automatically
+    converted).
+
 
 * 16.12
 
  -- a new unit test, test_sdc, was created to test the SDC interface
     to the networks
 
-* 16.11
+ -- we now rely on the network module to provide aion_inv (1/aion)
 
-* 16.10
+ -- the VODE integrator now supports SDC integration
+
 
 * 16.09
 

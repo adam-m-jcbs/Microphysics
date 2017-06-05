@@ -34,6 +34,7 @@ contains
   end subroutine update_unevolved_species
 
   subroutine evaluate_rates(state, rate_eval)
+    !$acc routine seq
     type(burn_t)     :: state
     type(rate_eval_t), intent(out) :: rate_eval
     type(plasma_state) :: pstate
@@ -55,7 +56,6 @@ contains
        rate_eval % unscreened_rates(:,i) = reactvec(1:4)
     end do
 
-    ! Included only if there are tabular rates
 
     ! Compute screened rates
     rate_eval % screened_rates = rate_eval % unscreened_rates(i_rate, :) * &
