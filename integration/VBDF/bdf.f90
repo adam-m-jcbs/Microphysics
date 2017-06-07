@@ -53,7 +53,7 @@ contains
   ! Advance system from t0 to t1.
   !
   subroutine bdf_advance(ts, y0, t0, y1, t1, dt0, reset, reuse, ierr, initial_call)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     real(dp_t),   intent(in   ) :: y0(neqs,bdf_npt), t0, t1, dt0
     real(dp_t),   intent(  out) :: y1(neqs,bdf_npt)
@@ -170,7 +170,7 @@ contains
   !   2. The step size h_n = t_n - t_{n-1}.
   !
   subroutine bdf_update(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
 
     integer  :: j, o
@@ -241,7 +241,7 @@ contains
   ! Predict (apply Pascal matrix).
   !
   subroutine bdf_predict(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer :: i, j, m, p
     do i = 0, ts%k
@@ -270,9 +270,9 @@ contains
   !   G(y) = y - dt * f(y,t) - rhs
   !
   subroutine bdf_solve(ts)
-    !$acc routine seq
-    !$acc routine(dgefa) seq
-    !$acc routine(dgesl) seq
+    !!$acc routine seq
+    !!$acc routine(dgefa) seq
+    !!$acc routine(dgesl) seq
 
     use rhs_module, only: rhs, jac
 
@@ -370,7 +370,7 @@ contains
   ! Check error estimates.
   !
   subroutine bdf_check(ts, retry, err)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     logical,      intent(out)   :: retry
     integer,      intent(out)   :: err
@@ -423,7 +423,7 @@ contains
   ! Correct (apply l coeffs) and advance step.
   !
   subroutine bdf_correct(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer :: i, m, p, o
 
@@ -463,7 +463,7 @@ contains
   ! Adjust step-size/order to maximize step-size.
   !
   subroutine bdf_adjust(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
 
     real(dp_t) :: c, error, eta(-1:1), rescale, etamax(ts%npt), etaminmax
@@ -548,7 +548,7 @@ contains
   ! Reset counters, set order to one, init Nordsieck history array.
   !
   subroutine bdf_reset(ts, y0, dt, reuse)
-    !$acc routine seq
+    !!$acc routine seq
 
     use rhs_module, only: rhs
 
@@ -615,7 +615,7 @@ contains
   !   3. rescale Nordsieck history array
   !
   subroutine rescale_timestep(ts, eta_in, force)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     real(dp_t),   intent(in   ) :: eta_in
     logical,      intent(in   ) :: force
@@ -646,7 +646,7 @@ contains
   ! Decrease order.
   !
   subroutine decrease_order(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer  :: j, o, p, m
     real(dp_t) :: c(0:6), c_shift(0:6)
@@ -687,7 +687,7 @@ contains
   ! Increase order.
   !
   subroutine increase_order(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer  :: j, o
     real(dp_t) :: c(0:6), c_shift(0:6)
@@ -715,7 +715,7 @@ contains
   ! Return $\alpha_0$.
   !
   function alpha0(k) result(a0)
-    !$acc routine seq
+    !!$acc routine seq
     integer,  intent(in) :: k
     real(dp_t) :: a0
     integer  :: j
@@ -729,7 +729,7 @@ contains
   ! Return $\hat{\alpha}_{n,0}$.
   !
   function alphahat0(k, h) result(a0)
-    !$acc routine seq
+    !!$acc routine seq
     integer,  intent(in) :: k
     real(dp_t), intent(in) :: h(0:k)
     real(dp_t) :: a0
@@ -747,7 +747,7 @@ contains
   ! $\xi^*_k$ that appears in Jackson and Sacks-Davis.
   !
   function xi_star_inv(k, h) result(xii)
-    !$acc routine seq
+    !!$acc routine seq
     integer,  intent(in) :: k
     real(dp_t), intent(in) :: h(0:)
     real(dp_t) :: xii, hs
@@ -764,7 +764,7 @@ contains
   ! Return $\xi_j$.
   !
   function xi_j(h, j) result(xi)
-    !$acc routine seq
+    !!$acc routine seq
     integer,  intent(in) :: j
     real(dp_t), intent(in) :: h(0:)
     real(dp_t) :: xi
@@ -775,7 +775,7 @@ contains
   ! Pre-compute error weights.
   !
   subroutine ewts(ts)
-    !$acc routine seq
+    !!$acc routine seq
     type(bdf_ts), intent(inout) :: ts
     integer :: m, p
     do p = 1, ts%npt
@@ -797,7 +797,7 @@ contains
   ! Compute weighted norm of y.
   !
   function norm(y, ewt) result(r)
-    !$acc routine seq
+    !!$acc routine seq
     real(dp_t), intent(in) :: y(1:), ewt(1:)
     real(dp_t) :: r
     integer :: m, n
@@ -810,6 +810,62 @@ contains
   end function norm
 
   !
+  ! Copy one BDF time-stepper into another.
+  !
+  ! Note that many operations are explicitly written out
+  ! in this subroutine due to limitations with the PGI
+  ! compiler intrinsics using the accelerator. Make sure to
+  ! try compiling with OpenACC support enabled before
+  ! committing any changes to this subroutine.
+  !
+  subroutine bdf_ts_copy(ts_dst, ts_src)
+    !$acc routine seq
+    !!$acc routine(dgemm) seq
+
+    use extern_probin_module, only : dt_min, jac_age, p_age
+
+    type(bdf_ts),   intent(inout) :: ts
+
+    integer :: i, j, k, n
+
+    ! these are set at build time
+    ts%npt = bdf_npt
+    ts%neq = neqs
+    ts%max_order = bdf_max_order
+
+    ! these are user-controllable
+    ts%max_steps  = 1000000
+    ts%max_iters  = 10
+    ts%verbose    = 0
+    ts%dt_min     = dt_min   !epsilon(ts%dt_min)
+    ts%eta_min    = 0.2_dp_t
+    ts%eta_max    = 10.0_dp_t
+    ts%eta_thresh = 1.50_dp_t
+    ts%max_j_age  = jac_age
+    ts%max_p_age  = p_age
+
+    ts%k = -1
+
+    do n = 1, ts % npt
+       do k = 1, neqs
+          ts % yd(k,n) = 0.0d0
+          do j = 1, neqs
+             ts % J(j,k,n) = 0.0d0
+             ts % P(j,k,n) = 0.0d0
+          enddo
+       enddo
+    enddo
+
+    ! force a rebuild at the start
+    ts%j_age = 666666666
+    ts%p_age = 666666666
+
+    ts%debug = .false.
+
+  end subroutine bdf_ts_build
+
+
+  !
   ! Build/destroy BDF time-stepper.
   ! Note that many operations are explicitly written out
   ! in this subroutine due to limitations with the PGI
@@ -819,7 +875,7 @@ contains
   !
   subroutine bdf_ts_build(ts)
     !$acc routine seq
-    !$acc routine(dgemm) seq
+    !!$acc routine(dgemm) seq
 
     use extern_probin_module, only : dt_min, jac_age, p_age
 
@@ -871,7 +927,7 @@ contains
   ! Various misc. helper functions
   !
   subroutine eye_r(A)
-    !$acc routine seq
+    !!$acc routine seq
     real(dp_t), intent(inout) :: A(:,:,:)
     integer :: i
     A = 0
@@ -888,7 +944,7 @@ contains
     end do
   end subroutine eye_i
   recursive function factorial(n) result(r)
-    !$acc routine seq
+    !!$acc routine seq
     integer, intent(in) :: n
     integer :: r
     if (n == 1) then
@@ -908,7 +964,7 @@ contains
   ! as a subroutine
   !
   subroutine eoshift_local(arr, sh, shifted_arr)
-    !$acc routine seq
+    !!$acc routine seq
     real(kind=dp_t), intent(in   ) :: arr(0:)
     integer,         intent(in   ) :: sh
     real(kind=dp_t), intent(  out) :: shifted_arr(0:)
@@ -946,7 +1002,7 @@ contains
   ! TODO: Check if this is implemented on GPU, if so delete all this
   !
   function minloc(arr) result(ret)
-    !$acc routine seq
+    !!$acc routine seq
     real(kind=dp_t), intent(in   ) :: arr(:)
     
     integer :: ret
@@ -1005,7 +1061,7 @@ contains
            enddo
         enddo
      end do
-     !$acc update device(A)
+     !!$acc update device(A)
   end subroutine init_pascal
 
 end module bdf

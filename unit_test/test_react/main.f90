@@ -207,7 +207,7 @@ program test_react
               !Dprint *, '   T   = ', burn_state_in%T
               !Dprint *, '   xn  = ', burn_state_in%xn(:)
 
-              call actual_burner(burn_state_in, burn_state_out, tmax, ZERO)
+              !call actual_burner(burn_state_in, burn_state_out, tmax, ZERO)
 
               do j = 1, nspec
                  state(ii, jj, kk, ispec + j - 1) = burn_state_out % xn(j)

@@ -23,7 +23,7 @@ contains
 
   subroutine actual_burner(state_in, state_out, dt, time)
 
-    !$acc routine seq
+    !!$acc routine seq
 
     use integrator_module, only: integrator
 
@@ -33,7 +33,7 @@ contains
     type (burn_t),    intent(inout) :: state_out
     double precision, intent(in   ) :: dt, time
 
-    call integrator(state_in, state_out, dt, time)
+    !call integrator(state_in, state_out, dt, time)
 
   end subroutine actual_burner
 
