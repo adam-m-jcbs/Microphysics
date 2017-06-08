@@ -337,7 +337,8 @@ contains
     real(kind=dp_t) :: h, h_old, hL, hU, ddydtt(neqs), eps, ewt(neqs), yddnorm
     integer :: n
 
-    ts_temp = ts
+    ts_temp%neq = 1
+    !call bdf_ts_copy(ts_temp, ts)
 
     eps = maxval(ts % rtol)
 

@@ -820,49 +820,102 @@ contains
   !
   subroutine bdf_ts_copy(ts_dst, ts_src)
     !$acc routine seq
-    !!$acc routine(dgemm) seq
+    use rpar_indices, only: n_rpar_comps
 
-    use extern_probin_module, only : dt_min, jac_age, p_age
+    type(bdf_ts),   intent(in   ) :: ts_src
+    type(bdf_ts),   intent(  out) :: ts_dst
 
-    type(bdf_ts),   intent(inout) :: ts
+    integer :: i, j, k
 
-    integer :: i, j, k, n
+    !TODO: Add error checking
+    !TODO: Make sure it's efficient/fast.  Might be called a lot.
+    ts_dst%npt        = ts_src%npt
+    ts_dst%neq        = ts_src%neq
+    ts_dst%max_order  = ts_src%max_order
+    ts_dst%max_steps  = ts_src%max_steps
+    ts_dst%max_iters  = ts_src%max_iters
+    ts_dst%verbose    = ts_src%verbose
+    ts_dst%dt_min     = ts_src%dt_min
+    ts_dst%eta_min    = ts_src%eta_min
+    ts_dst%eta_max    = ts_src%eta_max
+    ts_dst%eta_thresh = ts_src%eta_thresh
+    ts_dst%max_j_age  = ts_src%max_j_age
+    ts_dst%max_p_age  = ts_src%max_p_age
+    ts_dst%debug      = ts_src%debug
+    ts_dst%dump_unit  = ts_src%dump_unit
+    ts_dst%t          = ts_src%t
+    ts_dst%t1         = ts_src%t1
+    ts_dst%dt         = ts_src%dt
+    ts_dst%dt_nwt     = ts_src%dt_nwt
+    ts_dst%k          = ts_src%k
+    ts_dst%n          = ts_src%n
+    ts_dst%j_age      = ts_src%j_age
+    ts_dst%p_age      = ts_src%p_age
+    ts_dst%k_age      = ts_src%k_age
+    ts_dst%tq2save    = ts_src%tq2save 
+    ts_dst%refactor   = ts_src%refactor
+    ts_dst%nfe        = ts_src%nfe
+    ts_dst%nje        = ts_src%nje
+    ts_dst%nlu        = ts_src%nlu
+    ts_dst%nit        = ts_src%nit
+    ts_dst%nse        = ts_src%nse
+    ts_dst%ncse       = ts_src%ncse
+    ts_dst%ncit       = ts_src%ncit
+    ts_dst%ncdtmin    = ts_src%ncdtmin
 
-    ! these are set at build time
-    ts%npt = bdf_npt
-    ts%neq = neqs
-    ts%max_order = bdf_max_order
+    do i = 1, ts_src%neq
+       ts_dst%rtol(i) = ts_src%rtol(i)
+       ts_dst%atol(i) = ts_src%atol(i)             ! absolute tolerances
+    end do
 
-    ! these are user-controllable
-    ts%max_steps  = 1000000
-    ts%max_iters  = 10
-    ts%verbose    = 0
-    ts%dt_min     = dt_min   !epsilon(ts%dt_min)
-    ts%eta_min    = 0.2_dp_t
-    ts%eta_max    = 10.0_dp_t
-    ts%eta_thresh = 1.50_dp_t
-    ts%max_j_age  = jac_age
-    ts%max_p_age  = p_age
+    do i = -1, 2
+       ts_dst%tq(i) = ts_src%tq(i) 
+    end do
 
-    ts%k = -1
+    do k = 1, ts_src%npt
+       do j = 1, ts_src%neq
+          do i = 1, ts_src%neq
+             ts_dst%J(i,j,k) = ts_src%J(i,j,k)
+             ts_dst%P(i,j,k) = ts_src%P(i,j,k)
+          end do
+       end do
+    end do
+   
+    do k = 0, ts_src%max_order
+       do j = 1, ts_src%npt
+          do i = 1, ts_src%neq
+             ts_dst%z( i,j,k) = ts_src%z( i,j,k) 
+             ts_dst%z0(i,j,k) = ts_src%z0(i,j,k) 
+          end do
+       end do
+    end do
 
-    do n = 1, ts % npt
-       do k = 1, neqs
-          ts % yd(k,n) = 0.0d0
-          do j = 1, neqs
-             ts % J(j,k,n) = 0.0d0
-             ts % P(j,k,n) = 0.0d0
-          enddo
-       enddo
-    enddo
+    do i = 0, ts_src%max_order
+       ts_dst%h(i)     =  ts_src%h(i)
+       ts_dst%l(i)     =  ts_src%l(i)
+       ts_dst%shift(i) =  ts_src%shift(i)
+    end do
 
-    ! force a rebuild at the start
-    ts%j_age = 666666666
-    ts%p_age = 666666666
+    do j = 1, ts_src%npt
+       do i = 1, n_rpar_comps
+          ts_dst%upar(i,j) = ts_src%upar(i,j)
+       end do
+    end do
 
-    ts%debug = .false.
-
-  end subroutine bdf_ts_build
+    do j = 1, ts_src%npt
+       do i = 1, ts_src%neq
+          ts_dst%y(   i,j) = ts_src%y(   i,j)
+          ts_dst%yd(  i,j) = ts_src%yd(  i,j)
+          ts_dst%rhs( i,j) = ts_src%rhs( i,j)
+          ts_dst%e(   i,j) = ts_src%e(   i,j)
+          ts_dst%e1(  i,j) = ts_src%e1(  i,j)
+          ts_dst%ewt( i,j) = ts_src%ewt( i,j)
+          ts_dst%b(   i,j) = ts_src%b(   i,j)
+          ts_dst%ipvt(i,j) = ts_src%ipvt(i,j)
+       end do
+    end do
+    
+  end subroutine bdf_ts_copy
 
 
   !
