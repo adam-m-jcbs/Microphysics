@@ -25,6 +25,8 @@ program test_react
   use fabio_module
   use build_info_module
   use parallel, only : parallel_wtime
+  use cudafor, only: cudaEvent, cudaEventCreateWithFlags, cudaEventRecord
+  use cudafor, only: cudaEventElapsedTime, cudaEventDestroy, cudaEventDefault, cudaEventSynchronize
 
   implicit none
 
@@ -40,6 +42,7 @@ program test_react
 
   integer :: i, j, n
   integer :: ii, jj, kk
+  integer :: dj, dk, curdex, ierr
   integer :: nrho, nT, nX
 
   integer :: dm, nlevs
@@ -58,6 +61,7 @@ program test_react
   integer :: domlo(MAX_SPACEDIM), domhi(MAX_SPACEDIM)
 
   type (burn_t) :: burn_state_in, burn_state_out
+  type(cudaEvent), allocatable :: norm_start(:), norm_stop(:)
 
   real (kind=dp_t) :: dlogrho, dlogT
   real (kind=dp_t), allocatable :: xn_zone(:, :)
@@ -65,6 +69,7 @@ program test_react
   real (kind=dp_t) :: sum_X
 
   real (kind=dp_t) :: start_time, end_time
+  real             :: norm_time
 
   character (len=256) :: out_name
 
@@ -154,6 +159,9 @@ program test_react
      lo = lwb(get_box(s(n), i))
      hi = upb(get_box(s(n), i))
 
+     allocate(norm_start( (hi(3)-lo(3)+1)*(hi(2)-lo(2)+1)*(hi(1)-lo(1)+1) ) )
+     allocate(norm_stop(  (hi(3)-lo(3)+1)*(hi(2)-lo(2)+1)*(hi(1)-lo(1)+1) ) )
+
      ! First, construct the input state in a separate loop.
 
      do kk = lo(3), hi(3)
@@ -171,6 +179,8 @@ program test_react
      ! Set up a timer for the burn.
 
      start_time = parallel_wtime()
+     dj = hi(2)-lo(2)+1
+     dk = hi(3)-lo(3)+1
 
      !$OMP PARALLEL DO PRIVATE(ii,jj,kk,j) &
      !$OMP PRIVATE(burn_state_in, burn_state_out) &
@@ -179,6 +189,8 @@ program test_react
 
      !$acc data copyin(temp_min, dlogT, dens_min, dlogrho, lo, hi, tmax) &
      !$acc      copyin(itemp, irho, ispec, ispec_old, irodot, irho_hnuc) &
+     !$acc      copyin(dj, dk) &
+     !$acc      copy(norm_start, norm_stop) &
      !$acc      copy(state(lo(1):hi(1),lo(2):hi(2),lo(3):hi(3),:)) if (do_acc == 1)
 
      !$acc parallel reduction(+:n_rhs_avg) reduction(max:n_rhs_max) reduction(min:n_rhs_min) if (do_acc == 1)
@@ -196,7 +208,14 @@ program test_react
                  burn_state_in % xn(j) = state(ii, jj, kk, ispec_old + j - 1)
               enddo
 
+              curdex = ii + dj * (jj + dk * kk)
+
+              ierr = cudaEventCreateWithFlags(norm_start(curdex), cudaEventDefault)
+              ierr = cudaEventCreateWithFlags(norm_stop( curdex), cudaEventDefault)
+              ierr = cudaEventRecord(norm_start(curdex), 0)
               call normalize_abundances_burn(burn_state_in)
+              ierr = cudaEventRecord(norm_stop(curdex), 0)
+              ierr = cudaEventSynchronize(norm_stop(curdex))
 
               ! the integrator doesn't actually care about the initial internal
               ! energy.
@@ -240,7 +259,23 @@ program test_react
 
      print *, "Execution time: ", end_time - start_time
 
+     dj = hi(2)-lo(2)+1
+     dk = hi(3)-lo(3)+1
+     do kk = lo(3), hi(3)
+        do jj = lo(2), hi(2)
+           do ii = lo(1), hi(1)
+              curdex = ii + dj * (jj + dk * kk)
+
+              ierr = cudaEventElapsedTime(norm_time, norm_start(curdex), norm_stop(curdex))
+              print *, curdex, ":", norm_time
+              ierr = cudaEventDestroy(norm_start(curdex))
+              ierr = cudaEventDestroy(norm_stop( curdex))
+           end do
+        end do
+     end do
+
      sp(:,:,:,:) = state(:,:,:,:)
+     deallocate(norm_start, norm_stop)
   enddo
 
   ! note: integer division
