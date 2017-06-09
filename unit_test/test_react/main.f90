@@ -259,20 +259,20 @@ program test_react
 
      print *, "Execution time: ", end_time - start_time
 
-     dj = hi(2)-lo(2)+1
-     dk = hi(3)-lo(3)+1
-     do kk = lo(3), hi(3)
-        do jj = lo(2), hi(2)
-           do ii = lo(1), hi(1)
-              curdex = ii + dj * (jj + dk * kk)
+     !dj = hi(2)-lo(2)+1
+     !dk = hi(3)-lo(3)+1
+     !do kk = lo(3), hi(3)
+     !   do jj = lo(2), hi(2)
+     !      do ii = lo(1), hi(1)
+     !         curdex = ii + dj * (jj + dk * kk)
 
-              !ierr = cudaEventElapsedTime(norm_time, norm_start(curdex), norm_stop(curdex))
-              print *, curdex, ":", norm_time
-              !ierr = cudaEventDestroy(norm_start(curdex))
-              !ierr = cudaEventDestroy(norm_stop( curdex))
-           end do
-        end do
-     end do
+     !         !ierr = cudaEventElapsedTime(norm_time, norm_start(curdex), norm_stop(curdex))
+     !         print *, curdex, ":", norm_time
+     !         !ierr = cudaEventDestroy(norm_start(curdex))
+     !         !ierr = cudaEventDestroy(norm_stop( curdex))
+     !      end do
+     !   end do
+     !end do
 
      sp(:,:,:,:) = state(:,:,:,:)
      !deallocate(norm_start, norm_stop)
